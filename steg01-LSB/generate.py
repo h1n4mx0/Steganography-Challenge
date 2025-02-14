@@ -41,8 +41,8 @@ def hide_image(target_image, original_image, output_image="stego_image.png"):
     img.save(output_image)
     print(f"Ảnh đã nhúng được lưu thành: {output_image}")
 
-def extract_image(stego_image, output_image="extracted_image.png", width=None, height=None):
-    """Giải mã ảnh đã ẩn và lưu dưới dạng file ảnh"""
+def extract_image(stego_image):
+    """Brute-force kích thước ảnh đã giấu và lưu kết quả"""
     img = Image.open(stego_image).convert("RGB")
     img_width, img_height = img.size
     extracted_binary = ""
@@ -52,26 +52,30 @@ def extract_image(stego_image, output_image="extracted_image.png", width=None, h
             r, g, b = img.getpixel((x, y))
             extracted_binary += f"{r & 1}{g & 1}{b & 1}"
 
-    if width is None or height is None:
-        total_pixels = len(extracted_binary) // 24  # 24 bit cho mỗi pixel (8 bit mỗi kênh)
-        width = int(total_pixels ** 0.5)  # Giả sử ảnh hình vuông
-        height = total_pixels // width
+    # total_pixels = total_bits // 24  
+    total_pixels = 125*100
+    total_bits = total_pixels * 24
+    print(total_pixels)
+    possible_sizes = [(w, total_pixels // w) for w in range(1, total_pixels) if total_pixels % w == 0]
+    print(possible_sizes)
+    for width, height in possible_sizes:
+        extracted_img = Image.new("RGB", (width, height))
+        pixels = extracted_img.load()
+        data_index = 0
+        valid_pixels = 0
 
-    extracted_img = Image.new("RGB", (width, height))
-    pixels = extracted_img.load()
-    
-    data_index = 0
-    for y in range(height):
-        for x in range(width):
-            if data_index + 24 <= len(extracted_binary):
-                r = int(extracted_binary[data_index:data_index+8], 2)
-                g = int(extracted_binary[data_index+8:data_index+16], 2)
-                b = int(extracted_binary[data_index+16:data_index+24], 2)
-                pixels[x, y] = (r, g, b)
-                data_index += 24  # Mỗi pixel có 24 bit
+        for y in range(height):
+            for x in range(width):
+                if data_index + 24 <= total_bits:
+                    r = int(extracted_binary[data_index:data_index+8], 2)
+                    g = int(extracted_binary[data_index+8:data_index+16], 2)
+                    b = int(extracted_binary[data_index+16:data_index+24], 2)
+                    pixels[x, y] = (r, g, b)
+                    data_index += 24
+                    valid_pixels += 1
+        output_image = f"flag{width}.png"
+        extracted_img.save(output_image)
+        print(f"Ảnh đã giải mã được lưu thành: {output_image}")
 
-    extracted_img.save(output_image)
-    print(f"Ảnh đã giải mã được lưu thành: {output_image}")
-
-hide_image("flag.png", "input.png", "stego_output.png")
-extract_image("stego_output.png","extracted_image.png",400,400)
+# hide_image("flag.png", "input.png", "stego_output.png")
+extract_image("test.png")
